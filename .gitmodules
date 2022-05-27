@@ -7,3 +7,6 @@
 [submodule "thirdparty/bgfx"]
 	path = thirdparty/bgfx
 	url = https://github.com/bkaradzic/bgfx.git
+[submodule "thirdparty/imgui"]
+	path = thirdparty/imgui
+	url = https://github.com/ocornut/imgui.git

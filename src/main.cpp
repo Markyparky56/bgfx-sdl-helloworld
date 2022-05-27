@@ -4,8 +4,11 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include "../examples/00-helloworld/logo.h"
+#include <imgui.h>
+#include <backends/imgui_impl_sdl.h>
+#include <imgui_impl_bgfx.h>
 
-// On Windows bgfx defaults to considering D3D version, Vulkan must be specified explicitly
+// On Windows bgfx defaults to considering D3D versions, Vulkan must be specified explicitly
 // Similarly we need to specify SDL_WINDOW_VULKAN if we want a Vulkan-friendly window surface
 // Of course you could do this at runtime with the proper window recreation processes
 #define USING_VULKAN 1
@@ -17,6 +20,7 @@ public:
 
   int Init();
   void Run();
+  void ImGuiFrame();
   void Draw();
   void Cleanup();
 
@@ -93,6 +97,30 @@ int MyApp::Init()
     , 0
   );
 
+  // ImGui init
+  ImGui::CreateContext();
+  ImGuiIO& imGuiIO = ImGui::GetIO();
+
+  ImGui_Implbgfx_Init(255); // TODO: expose view index? Define as constant somewhere?
+  switch (init.type)
+  {
+  case bgfx::RendererType::Direct3D9:
+  case bgfx::RendererType::Direct3D11:
+  case bgfx::RendererType::Direct3D12:
+    ImGui_ImplSDL2_InitForD3D(Window);
+    break;
+  case bgfx::RendererType::Metal:
+    ImGui_ImplSDL2_InitForMetal(Window);
+    break;
+  case bgfx::RendererType::OpenGL:
+  case bgfx::RendererType::OpenGLES: 
+    ImGui_ImplSDL2_InitForOpenGL(Window, nullptr);
+    break;
+  case bgfx::RendererType::Vulkan:
+    ImGui_ImplSDL2_InitForVulkan(Window);
+    break;
+  }
+
   // Init Success!
   return 0;
 }
@@ -106,6 +134,8 @@ void MyApp::Run()
   {
     while (SDL_PollEvent(&event) != 0)
     {
+      ImGui_ImplSDL2_ProcessEvent(&event);
+
       if (event.type == SDL_QUIT)
       {
         bWantToQuit = true;
@@ -129,8 +159,25 @@ void MyApp::Run()
   } while (!bWantToQuit);
 }
 
+void MyApp::ImGuiFrame()
+{
+  ImGui_Implbgfx_NewFrame();
+  ImGui_ImplSDL2_NewFrame();
+
+  ImGui::NewFrame();
+
+  // Replace with actual useful imgui code here
+  ImGui::ShowDemoWindow(); 
+
+  ImGui::Render();
+  ImGui_Implbgfx_RenderDrawLists(ImGui::GetDrawData());
+}
+
 void MyApp::Draw()
 {
+  // Handle ImGui
+  ImGuiFrame();
+
   // Set view 0 as default viewport
   bgfx::setViewRect(0, 0, 0, (uint16_t)WindowWidth, (uint16_t)WindowHeight);
 
@@ -166,6 +213,12 @@ void MyApp::Draw()
 
 void MyApp::Cleanup()
 {
+  ImGui_ImplSDL2_Shutdown();
+  ImGui_Implbgfx_Shutdown();
+
+  ImGui::DestroyContext();
+  bgfx::shutdown();
+
   SDL_DestroyWindow(Window);
 }
 

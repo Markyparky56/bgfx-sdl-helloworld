@@ -11,6 +11,8 @@ local SRC_DIR = "src/"
 local BX_DIR = "thirdparty/bx"
 local BIMG_DIR = "thirdparty/bimg"
 local BGFX_DIR = "thirdparty/bgfx"
+local IMGUI_DIR = "thirdparty/imgui"
+local IMGUI_BGFX_DIR = "thirdparty/imgui-bgfx"
 
 -- Try get SDL path
 local SDL_PATH = ""
@@ -97,7 +99,9 @@ project "bgfx-sdl-helloworld"
     {
         path.join(BX_DIR,"include"),
         path.join(BGFX_DIR,"include"),
-        path.join(SDL_PATH,"include")
+        path.join(SDL_PATH,"include"),
+        path.join(IMGUI_DIR,""),
+        path.join(IMGUI_BGFX_DIR,"")
     }
     filter "architecture:x86"
         libdirs { path.join(SDL_LIB_DIR,"x86") }
@@ -108,7 +112,8 @@ project "bgfx-sdl-helloworld"
         "bimg",
         "bgfx",
         "SDL2",
-        "SDL2main"
+        "SDL2main",
+        "imgui"
     }
     filter "system:windows"
         links { "gdi32", "kernel32", "psapi" }        
@@ -219,4 +224,30 @@ project "bx"
         defines "BX_CONFIG_DEBUG=1"
     filter "action:vs*"
         defines "_CRT_SECURE_NO_WARNINGS"
+    bxCompat()
+
+project "imgui"
+    kind "StaticLib"
+    language "C++"
+    exceptionhandling "Off"
+    rtti "Off"
+    staticruntime "On"
+    files
+    {
+        path.join(IMGUI_DIR, "*.h"),
+        path.join(IMGUI_DIR, "*.cpp"),
+        path.join(IMGUI_DIR, "backends/imgui_impl_sdl.h"),
+        path.join(IMGUI_DIR, "backends/imgui_impl_sdl.cpp"),
+        path.join(IMGUI_BGFX_DIR, "imgui_impl_bgfx.h"),
+        path.join(IMGUI_BGFX_DIR, "imgui_impl_bgfx.cpp")
+    }
+    includedirs
+    {
+        path.join(IMGUI_DIR,""),
+        path.join(BX_DIR, "include"),
+        path.join(BGFX_DIR, "include"),
+        path.join(BGFX_DIR,"examples/common/imgui"), -- For vs/fs_ocornut_imgui.bin.h
+        path.join(SDL_PATH,"include")
+    }
+
     bxCompat()
