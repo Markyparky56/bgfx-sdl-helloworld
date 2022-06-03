@@ -13,6 +13,16 @@
 // Of course you could do this at runtime with the proper window recreation processes
 #define USING_VULKAN 1
 
+SDL_WindowFlags operator|(const SDL_WindowFlags& lhs, const SDL_WindowFlags& rhs)
+{
+  return (SDL_WindowFlags)(int(lhs) | int(rhs));
+}
+SDL_WindowFlags& operator|=(SDL_WindowFlags& lhs, const SDL_WindowFlags& rhs)
+{
+  lhs = lhs | rhs;
+  return lhs;
+}
+
 class MyApp
 {
 public:
@@ -47,9 +57,9 @@ int MyApp::Init()
 
   SDL_WindowFlags windowFlags = (SDL_WindowFlags)0;
 #if USING_VULKAN
-  // c-style enums suck.
-  windowFlags = (SDL_WindowFlags)((int)windowFlags | (int)SDL_WINDOW_VULKAN);
+  windowFlags |= SDL_WindowFlags::SDL_WINDOW_VULKAN;
 #endif
+  windowFlags |= SDL_WindowFlags::SDL_WINDOW_RESIZABLE;
 
   Window = SDL_CreateWindow(
     "MyApp",
@@ -149,6 +159,8 @@ void MyApp::Run()
     {
       bgfx::reset((uint32_t)currentWidth, (uint32_t)currentHeight, BGFX_RESET_VSYNC);
       bgfx::setViewRect(kClearView, 0, 0, bgfx::BackbufferRatio::Equal);
+      WindowWidth = currentWidth;
+      WindowHeight = currentHeight;
     }
 
     if (!bWantToQuit)
