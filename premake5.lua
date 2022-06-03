@@ -5,6 +5,24 @@ if _OPTIONS["cc"] ~= nil then
     BUILD_DIR = BUILD_DIR .. "_" .. _OPTIONS["cc"]
 end
 
+newoption {
+    trigger = "with-exceptions",
+    description = "Exceptions Always Enabled? (ON/OFF)"
+}
+local EXCEPTIONS_ENABLED = "Off"
+if _OPTIONS["with-exceptions"] ~= nil then
+    EXCEPTIONS_ENABLED = "On"
+end
+
+newoption {
+    trigger = "dynamic-runtime",
+    description = "Should use dynamically linked runtime?"
+}
+local STATIC_RUNTIME = "On"
+if _OPTIONS["dynamic-runtime"] ~= nil then
+    STATIC_RUNTIME = "Off"
+end
+
 local SRC_DIR = "src/"
 
 -- Known paths to libraries
@@ -68,8 +86,10 @@ workspace "bgfx-sdl-helloworld"
         }
     filter "action:vs*"
         -- BGFX requires __cplusplus to actually report the correct version which requires the /Zc:__cplusplus option set
-        -- Kinda sucky msvc hasn't turned this on by default yes
+        -- Kinda sucky msvc hasn't turned this on by default yet
         buildoptions { "/Zc:__cplusplus" }
+        -- Cores go brrrrr
+        flags { "MultiProcessorCompile" }
    
 function bxCompat()
     filter "action:vs*"
@@ -85,8 +105,9 @@ project "bgfx-sdl-helloworld"
     kind "ConsoleApp" -- Maybe want to make this filter on config, e.g. WindowedApp instead for Shipping
     language "C++"
     cppdialect "C++20" -- Shiny, gimmie those designated initialisers
+    exceptionhandling (EXCEPTIONS_ENABLED)
     rtti "Off"
-    staticruntime "On" -- Maybe make this a commandline option?
+    staticruntime (STATIC_RUNTIME)
     targetdir (BUILD_DIR .. "/bin/" .. "%{cfg.architecture}" .. "/" .. "%{cfg.shortname}")
     objdir (BUILD_DIR .. "/bin/obj/" .. "%{cfg.architecture}" .. "/" .. "%{cfg.shortname}")
     files 
@@ -126,6 +147,8 @@ project "bgfx-sdl-helloworld"
 
     bxCompat()
 
+group "bgfx Libs"
+
 -- BGFX libs lifted from bgfx-minimal-example
 -- Note: bgfx requires a minimum of C++14, accepts C++17, and judges you for using anything newer
 -- See: https://gist.github.com/bkaradzic/2e39896bc7d8c34e042b#orthodox-c
@@ -133,10 +156,10 @@ project "bgfx"
     kind "StaticLib"
     language "C++"
     cppdialect "C++14"
-    exceptionhandling "Off"
+    exceptionhandling (EXCEPTIONS_ENABLED)
     rtti "Off"
     defines "__STDC_FORMAT_MACROS"
-    staticruntime "On"
+    staticruntime (STATIC_RUNTIME)
     files
     {
         path.join(BGFX_DIR, "include/bgfx/**.h"),
@@ -174,9 +197,9 @@ project "bimg"
     kind "StaticLib"
     language "C++"
     cppdialect "C++14"
-    exceptionhandling "Off"
+    exceptionhandling (EXCEPTIONS_ENABLED)
     rtti "Off"
-    staticruntime "On"
+    staticruntime (STATIC_RUNTIME)
     files
     {
         path.join(BIMG_DIR, "include/bimg/*.h"),
@@ -198,10 +221,10 @@ project "bx"
     kind "StaticLib"
     language "C++"
     cppdialect "C++14"
-    exceptionhandling "Off"
+    exceptionhandling (EXCEPTIONS_ENABLED)
     rtti "Off"
     defines "__STDC_FORMAT_MACROS"
-    staticruntime "On"
+    staticruntime (STATIC_RUNTIME)
     files
     {
         path.join(BX_DIR, "include/bx/*.h"),
@@ -229,9 +252,9 @@ project "bx"
 project "imgui"
     kind "StaticLib"
     language "C++"
-    exceptionhandling "Off"
+    exceptionhandling (EXCEPTIONS_ENABLED)
     rtti "Off"
-    staticruntime "On"
+    staticruntime (STATIC_RUNTIME)
     files
     {
         path.join(IMGUI_DIR, "*.h"),
@@ -249,5 +272,238 @@ project "imgui"
         path.join(BGFX_DIR,"examples/common/imgui"), -- For vs/fs_ocornut_imgui.bin.h
         path.join(SDL_PATH,"include")
     }
-
     bxCompat()
+
+group "Tools"
+-- bgfx tools (+thirdparty tools)
+local BGFX_TOOLS_DIR = path.join(BGFX_DIR, "tools")
+local BGFX_3RDPARTY_DIR = path.join(BGFX_DIR, "3rdparty")
+
+project "fcpp"
+    kind "StaticLib"
+    language "C++" -- C?
+    exceptionhandling (EXCEPTIONS_ENABLED)
+    rtti "Off"
+    staticruntime (STATIC_RUNTIME)
+    files
+    {
+        path.join(BGFX_3RDPARTY_DIR, "fcpp/*.h"),
+        path.join(BGFX_3RDPARTY_DIR, "fcpp/*.c")
+    }
+    excludes
+    {
+        path.join(BGFX_3RDPARTY_DIR, "fcpp/usecpp.c")
+    }
+    filter { "action:vs*" }
+        defines {
+            "_CRT_SECURE_NO_WARNINGS"
+        }
+    bxCompat()
+
+project "glslang"
+    kind "StaticLib"
+    language "C++"
+    exceptionhandling (EXCEPTIONS_ENABLED)
+    rtti "Off"
+    staticruntime (STATIC_RUNTIME)
+    files
+    {
+        path.join(BGFX_3RDPARTY_DIR, "glslang/glslang/**.h"),
+        path.join(BGFX_3RDPARTY_DIR, "glslang/glslang/**.cpp"),
+        path.join(BGFX_3RDPARTY_DIR, "glslang/hlsl/*.cpp"),
+        path.join(BGFX_3RDPARTY_DIR, "glslang/OGLCompilersDLL/*.h"),
+        path.join(BGFX_3RDPARTY_DIR, "glslang/OGLCompilersDLL/*.cpp"),
+        path.join(BGFX_3RDPARTY_DIR, "glslang/SPIRV/**.h"),
+        path.join(BGFX_3RDPARTY_DIR, "glslang/SPIRV/**.cpp"),
+    }
+    excludes 
+    {
+        path.join(BGFX_3RDPARTY_DIR, "glslang/glslang/OSDependent/Windows/main.cpp")
+    }
+    filter { "system:linux" }
+        excludes {
+            path.join(BGFX_3RDPARTY_DIR, "glslang/glslang/OSDependent/Windows/ossource.cpp")
+        }
+    filter { "system:windows" }
+        excludes {
+            path.join(BGFX_3RDPARTY_DIR, "glslang/glslang/OSDependent/Unix/ossource.cpp")
+        }
+    includedirs
+    {
+        path.join(BGFX_3RDPARTY_DIR),
+        path.join(BGFX_3RDPARTY_DIR, "glslang"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/include"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/source"),
+    }
+    defines 
+    {
+        "ENABLE_OPT=1",
+        "ENABLE_HLSL=1"
+    }
+    bxCompat()
+
+project "glsl-optimizer"
+    kind "StaticLib"
+    language "C++"
+    exceptionhandling (EXCEPTIONS_ENABLED)
+    rtti ("Off")
+    staticruntime (STATIC_RUNTIME)
+    files
+    {
+        path.join(BGFX_3RDPARTY_DIR, "glsl-optimizer/src/glsl/**.h"),
+        path.join(BGFX_3RDPARTY_DIR, "glsl-optimizer/src/glsl/**.cpp"),
+        path.join(BGFX_3RDPARTY_DIR, "glsl-optimizer/src/glsl/**.c"),
+        path.join(BGFX_3RDPARTY_DIR, "glsl-optimizer/src/mesa/**.h"),
+        path.join(BGFX_3RDPARTY_DIR, "glsl-optimizer/src/mesa/**.cpp"),
+        path.join(BGFX_3RDPARTY_DIR, "glsl-optimizer/src/mesa/**.c"),
+        path.join(BGFX_3RDPARTY_DIR, "glsl-optimizer/src/util/*.h"),
+        path.join(BGFX_3RDPARTY_DIR, "glsl-optimizer/src/util/*.c"),
+    }
+    excludes
+    {
+        path.join(BGFX_3RDPARTY_DIR, "glsl-optimizer/src/glsl/main.cpp")
+    }
+    includedirs
+    {
+        path.join(BGFX_3RDPARTY_DIR, "glsl-optimizer/src"),
+        path.join(BGFX_3RDPARTY_DIR, "glsl-optimizer/include"),
+        path.join(BGFX_3RDPARTY_DIR, "glsl-optimizer/src/mesa"),
+        path.join(BGFX_3RDPARTY_DIR, "glsl-optimizer/src/glsl"),
+    }
+    filter { "action:vs*" }
+        defines {
+            "_CRT_SECURE_NO_WARNINGS",            
+            "strdup=_strdup",
+        }
+    bxCompat()
+
+project "spirv-cross"
+    kind "StaticLib"
+    language "C++"
+    exceptionhandling (EXCEPTIONS_ENABLED)
+    rtti "Off"
+    staticruntime (STATIC_RUNTIME)
+    files
+    {
+        path.join(BGFX_3RDPARTY_DIR, "spirv-cross/*.hpp"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-cross/*.cpp")
+    }
+    excludes
+    {
+        path.join(BGFX_3RDPARTY_DIR, "spirv-cross/spirv_cross_c.cpp")
+    }
+    includedirs
+    {
+        path.join(BGFX_3RDPARTY_DIR, "spirv-cross/include")
+    }
+    if EXCEPTIONS_ENABLED == "Off" then
+        defines {
+            "SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS"
+        }
+    end
+    filter { "action:vs*" }
+        defines {
+            "_CRT_SECURE_NO_WARNINGS"
+        }
+    bxCompat()
+
+project "spirv-opt"
+    kind "StaticLib"
+    language "C++"
+    exceptionhandling (EXCEPTIONS_ENABLED)
+    rtti "Off"
+    staticruntime (STATIC_RUNTIME)
+    files
+    {
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/source/*.h"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/source/*.cpp"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/source/opt/*.h"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/source/opt/*.cpp"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/source/reduce/*.h"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/source/reduce/*.cpp"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/source/util/*.h"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/source/util/*.cpp"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/source/val/*.h"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/source/val/*.cpp"),
+    }
+    includedirs
+    {
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/include"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/include/generated"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-tools/source"),
+        path.join(BGFX_3RDPARTY_DIR, "spirv-headers/include"),
+    }
+    filter { "action:vs*" }
+        defines {
+            "_CRT_SECURE_NO_WARNINGS"
+        }
+    bxCompat()
+
+project "shaderc"
+    kind "ConsoleApp"
+    language "C++"
+    exceptionhandling (EXCEPTIONS_ENABLED)
+    rtti "Off"
+    staticruntime (STATIC_RUNTIME)
+    files
+    {
+        -- hard-coded files in the src folder
+        path.join(BGFX_DIR, "src/shader.h"),
+        path.join(BGFX_DIR, "src/shader.cpp"),
+        path.join(BGFX_DIR, "src/shader_dx9bc.h"),
+        path.join(BGFX_DIR, "src/shader_dx9bc.cpp"),
+        path.join(BGFX_DIR, "src/shader_dxbc.h"),
+        path.join(BGFX_DIR, "src/shader_dxbc.cpp"),
+        path.join(BGFX_DIR, "src/shader_spirv.h"),
+        path.join(BGFX_DIR, "src/shader_spirv.cpp"),
+        path.join(BGFX_DIR, "src/vertexlayout.h"),
+        path.join(BGFX_DIR, "src/vertexlayout.cpp"),
+
+        -- the rest in the actual shaderc tools folder
+        path.join(BGFX_DIR, "tools/shaderc/*.h"),
+        path.join(BGFX_DIR, "tools/shaderc/*.cpp")
+    }
+    includedirs
+    {
+        path.join(BX_DIR, "include"),
+        path.join(BIMG_DIR, "include"),
+        path.join(BGFX_DIR, "include"),
+        path.join(BGFX_DIR, "3rdparty/webgpu/include"),
+        path.join(BGFX_DIR, "3rdparty/dxsdk/include"),
+        path.join(BGFX_DIR, "3rdparty/fcpp"),
+        path.join(BGFX_DIR, "3rdparty/glslang/glslang/Public"),
+        path.join(BGFX_DIR, "3rdparty/glslang/glslang/Include"),
+        path.join(BGFX_DIR, "3rdparty/glslang"),
+        path.join(BGFX_DIR, "3rdparty/glsl-optimizer/include"),
+        path.join(BGFX_DIR, "3rdparty/glsl-optimizer/src/glsl"),
+        path.join(BGFX_DIR, "3rdparty/spirv-cross"),
+        path.join(BGFX_DIR, "3rdparty/spirv-tools/include"),
+        path.join(BGFX_DIR, "3rdparty/glsl-optimizer/include/c99"),
+    }
+    defines 
+    {
+        "__STDC_LIMIT_MACROS",
+        "__STDC_FORMAT_MACROS",
+        "__STDC_CONSTANT_MACROS"
+    }
+    links 
+    {
+        "bx",
+        "glslang",
+        "glsl-optimizer",
+        "fcpp",
+        "spirv-cross",
+        "spirv-opt"
+    }
+    filter "system:windows"
+        links { "psapi" }
+    filter { "action:vs*" }
+        defines {
+            "_CRT_SECURE_NO_WARNINGS"
+        }
+    bxCompat()
+
+-- TODO:
+-- geometryc/v
+-- texturec/v

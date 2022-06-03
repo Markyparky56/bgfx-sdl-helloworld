@@ -47,6 +47,7 @@ MyApp::MyApp()
   : Window(nullptr)
   , WindowWidth(1024)
   , WindowHeight(768)
+  , Debug(0)
 {
 }
 
