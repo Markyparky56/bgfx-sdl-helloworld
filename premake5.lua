@@ -51,14 +51,22 @@ SDL_LIB_DIR = path.join(SDL_PATH,"lib")
 workspace "bgfx-sdl-helloworld"
     location (BUILD_DIR)
     startproject "bgfx-sdl-helloworld"
-    -- Further configs go here
-    configurations { "Debug", "Release" }
+    configurations { 
+        "Debug", 
+        "Release" 
+        -- Further configs go here (e.g. Testing, Shipping)
+    }
     -- Let 32 bit die already
     if os.is64bit() then
         platforms "x86_64"
     else
         platforms "x86"
     end
+
+    targetdir (BUILD_DIR .. "/bin/" .. "%{cfg.architecture}" .. "/" .. "%{cfg.shortname}")
+    debugdir "%{cfg.targetdir}" -- dupe of targetdir, is there a way to re-use target?
+    objdir (BUILD_DIR .. "/bin/obj/" .. "%{cfg.architecture}" .. "/" .. "%{cfg.shortname}")
+
     filter "configurations:Debug"
         defines
         {
@@ -108,8 +116,6 @@ project "bgfx-sdl-helloworld"
     exceptionhandling (EXCEPTIONS_ENABLED)
     rtti "Off"
     staticruntime (STATIC_RUNTIME)
-    targetdir (BUILD_DIR .. "/bin/" .. "%{cfg.architecture}" .. "/" .. "%{cfg.shortname}")
-    objdir (BUILD_DIR .. "/bin/obj/" .. "%{cfg.architecture}" .. "/" .. "%{cfg.shortname}")
     files 
     {
         path.join(SRC_DIR,"**.h"),  -- Switch to .hpp if that's your flavour
@@ -134,7 +140,7 @@ project "bgfx-sdl-helloworld"
         "bgfx",
         "SDL2",
         "SDL2main",
-        "imgui"
+        "imgui-sdl-bgfx"
     }
     filter "system:windows"
         links { "gdi32", "kernel32", "psapi" }        
@@ -249,7 +255,7 @@ project "bx"
         defines "_CRT_SECURE_NO_WARNINGS"
     bxCompat()
 
-project "imgui"
+project "imgui-sdl-bgfx"
     kind "StaticLib"
     language "C++"
     exceptionhandling (EXCEPTIONS_ENABLED)
