@@ -140,7 +140,13 @@ project "bgfx-sdl-helloworld"
         "bgfx",
         "SDL2",
         "SDL2main",
-        "imgui-sdl-bgfx"
+        "imgui-sdl-bgfx",
+        "shaderclib",
+        "glslang",
+        "glsl-optimizer",
+        "fcpp",
+        "spirv-cross",
+        "spirv-opt"
     }
     filter "system:windows"
         links { "gdi32", "kernel32", "psapi" }        
@@ -278,6 +284,59 @@ project "imgui-sdl-bgfx"
         path.join(BGFX_DIR,"examples/common/imgui"), -- For vs/fs_ocornut_imgui.bin.h
         path.join(SDL_PATH,"include")
     }
+    bxCompat()
+
+project "shaderclib"
+    kind "StaticLib"
+    language "C++"
+    exceptionhandling (EXCEPTIONS_ENABLED)
+    rtti "Off"
+    staticruntime (STATIC_RUNTIME)
+    files
+    {
+        -- hard-coded files in the src folder
+        path.join(BGFX_DIR, "src/shader.h"),
+        path.join(BGFX_DIR, "src/shader.cpp"),
+        path.join(BGFX_DIR, "src/shader_dx9bc.h"),
+        path.join(BGFX_DIR, "src/shader_dx9bc.cpp"),
+        path.join(BGFX_DIR, "src/shader_dxbc.h"),
+        path.join(BGFX_DIR, "src/shader_dxbc.cpp"),
+        path.join(BGFX_DIR, "src/shader_spirv.h"),
+        path.join(BGFX_DIR, "src/shader_spirv.cpp"),
+        path.join(BGFX_DIR, "src/vertexlayout.h"),
+        path.join(BGFX_DIR, "src/vertexlayout.cpp"),
+
+        -- the rest in the actual shaderc tools folder
+        path.join(BGFX_DIR, "tools/shaderc/*.h"),
+        path.join(BGFX_DIR, "tools/shaderc/*.cpp")
+    }
+    includedirs
+    {
+        path.join(BX_DIR, "include"),
+        path.join(BIMG_DIR, "include"),
+        path.join(BGFX_DIR, "include"),
+        path.join(BGFX_DIR, "3rdparty/webgpu/include"),
+        path.join(BGFX_DIR, "3rdparty/dxsdk/include"),
+        path.join(BGFX_DIR, "3rdparty/fcpp"),
+        path.join(BGFX_DIR, "3rdparty/glslang/glslang/Public"),
+        path.join(BGFX_DIR, "3rdparty/glslang/glslang/Include"),
+        path.join(BGFX_DIR, "3rdparty/glslang"),
+        path.join(BGFX_DIR, "3rdparty/glsl-optimizer/include"),
+        path.join(BGFX_DIR, "3rdparty/glsl-optimizer/src/glsl"),
+        path.join(BGFX_DIR, "3rdparty/spirv-cross"),
+        path.join(BGFX_DIR, "3rdparty/spirv-tools/include"),
+        path.join(BGFX_DIR, "3rdparty/glsl-optimizer/include/c99"),
+    }
+    defines 
+    {
+        "__STDC_LIMIT_MACROS",
+        "__STDC_FORMAT_MACROS",
+        "__STDC_CONSTANT_MACROS"
+    }
+    filter { "action:vs*" }
+        defines {
+            "_CRT_SECURE_NO_WARNINGS"
+        }
     bxCompat()
 
 group "Tools"
